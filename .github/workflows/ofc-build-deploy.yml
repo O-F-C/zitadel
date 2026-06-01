@@ -43,8 +43,8 @@ env:
   SERVER1_IP: "10.209.0.2"
   SERVER2_IP: "10.209.0.4"
   SSH_PORT: "6130"
-  SSH_USER: "root"
-  DEPLOY_ROOT: /root/zitadel
+  SSH_USER: "deploy"
+  DEPLOY_ROOT: /home/deploy/zitadel
   # GHCR pull credentials used on the target servers
   GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
   GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
