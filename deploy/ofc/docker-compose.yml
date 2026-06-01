@@ -47,6 +47,10 @@ services:
   login:
     image: ${IMAGE_LOGIN:-ghcr.io/o-f-c/zitadel-login:latest}
     restart: unless-stopped
+    # Run as root (like upstream deploy/compose) so the login client can read the
+    # bootstrap PAT regardless of the /login-client dir perms set by
+    # init-login-client (chmod 770, owner 1000:1000) vs the image's uid 1001.
+    user: "0"
     environment:
       ZITADEL_API_URL: http://zitadel:8080
       NEXT_PUBLIC_BASE_PATH: /ui/v2/login
