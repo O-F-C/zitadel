@@ -7,6 +7,13 @@ RUN mkdir -p /.env-file && touch /.env-file/.env && chown -R nextjs:nodejs /.env
 
 COPY --chown=nextjs:nodejs .next/standalone ./
 
+# OFC-Fix: Der standalone-Server (apps/login/server.js via scripts/server.mjs) startet
+# mit dir = import.meta.dirname (= /app/apps/login) und serviert public aus <dir>/public.
+# Der upstream build-script kopiert public aber nur ins standalone-Root (/app/public),
+# nicht neben den Server. Ohne diese Zeile sind ALLE public-Assets (Logo, bg.jpg) 404.
+# Build-Context ist apps/login, daher ist "public" hier apps/login/public aus dem Repo.
+COPY --chown=nextjs:nodejs public ./apps/login/public
+
 USER nextjs
 ENV HOSTNAME="::" \
     PORT="3000" \
