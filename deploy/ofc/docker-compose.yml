@@ -34,7 +34,7 @@ services:
       ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /login-client/pat
       ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: '2030-01-01T00:00:00Z'
     ports:
-      - "127.0.0.1:8123:8080"
+      - "8123:8080"
     volumes:
       - login-client:/login-client
     healthcheck:
