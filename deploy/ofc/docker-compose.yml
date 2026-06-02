@@ -1,10 +1,32 @@
-# OFC ZITADEL stack — images built from our fork's main and pushed to GHCR by
-# .github/workflows/ofc-build-deploy.yml. The CI overwrites this file on the
-# server and pins IMAGE_ZITADEL / IMAGE_LOGIN to the built commit via the deploy
-# shell environment. The secrets (ZITADEL_MASTERKEY, ZITADEL_DOMAIN,
-# ZITADEL_DB_PASSWORD) live in the pre-existing /home/deploy/zitadel/.env and are
-# NOT managed by CI. Fallbacks below point at our fork's :latest for manual runs.
+networks:
+  zitadel-net:
+
 services:
+  traefik:
+    image: traefik:v3.6        # ggf. pinnen/prüfen, siehe Token-Hinweis oben
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=zitadel-net"
+      - "--entrypoints.websecure.address=:443"
+      # web-Entrypoint + Redirect komplett raus
+      - "--certificatesresolvers.hetzner.acme.dnschallenge=true"
+      - "--certificatesresolvers.hetzner.acme.dnschallenge.provider=hetzner"
+      - "--certificatesresolvers.hetzner.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
+      - "--certificatesresolvers.hetzner.acme.email=admin@oltmer-food-consulting.de"
+      - "--certificatesresolvers.hetzner.acme.storage=/letsencrypt/acme.json"
+    environment:
+      - HETZNER_API_TOKEN=${HETZNER_DNS_TOKEN}    # DNS-Console-Token
+    ports:
+      - "443:443"
+    volumes:
+      - ./letsencrypt:/letsencrypt              # acme.json muss chmod 600 sein
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - zitadel-net
+
   init-login-client:
     image: alpine:3
     command: ["sh", "-c", "chown -R 1000:1000 /login-client && chmod 770 /login-client"]
@@ -33,8 +55,6 @@ services:
       ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: Login Client
       ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /login-client/pat
       ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: '2030-01-01T00:00:00Z'
-    ports:
-      - "8123:8080"
     volumes:
       - login-client:/login-client
     healthcheck:
@@ -43,6 +63,20 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - zitadel-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=zitadel-net"
+      - "traefik.http.routers.zitadel.rule=Host(`auth.oltmer-food-consulting.de`) && !PathPrefix(`/ui/v2/login`)"
+      - "traefik.http.routers.zitadel.entrypoints=websecure"
+      - "traefik.http.routers.zitadel.tls.certresolver=hetzner"
+      # Wildcard-Cert hier einmal deklarieren:
+      - "traefik.http.routers.zitadel.tls.domains[0].main=auth.oltmer-food-consulting.de"
+      # >>> der entscheidende Teil: h2c statt http <
+      - "traefik.http.services.zitadel.loadbalancer.server.scheme=h2c"
+      - "traefik.http.services.zitadel.loadbalancer.server.port=8080"
+      - "traefik.http.services.zitadel.loadbalancer.passhostheader=true"
 
   login:
     image: ${IMAGE_LOGIN:-ghcr.io/o-f-c/zitadel-login:latest}
@@ -59,10 +93,20 @@ services:
     depends_on:
       zitadel:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:3333:3000"
     volumes:
       - login-client:/login-client
+    networks:
+      - zitadel-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=zitadel-net"
+      - "traefik.http.routers.zitadel-login.rule=Host(`auth.oltmer-food-consulting.de`) && PathPrefix(`/ui/v2/login`)"
+      - "traefik.http.routers.zitadel-login.entrypoints=websecure"
+      - "traefik.http.routers.zitadel-login.tls.certresolver=hetzner"
+      - "traefik.http.routers.zitadel-login.priority=20"      # gewinnt für /ui/v2/login
+      # Login ist ein normaler Next.js-HTTP-Service -> kein h2c
+      - "traefik.http.services.zitadel-login.loadbalancer.server.port=3000"
+      - "traefik.http.services.zitadel-login.loadbalancer.passhostheader=true"
 
 volumes:
   login-client:
