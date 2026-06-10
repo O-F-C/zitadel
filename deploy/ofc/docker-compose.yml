@@ -11,6 +11,11 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=zitadel-net"
       - "--entrypoints.websecure.address=:443"
+      # Hetzner LB schickt Proxy Protocol v2 vor dem TLS-Handshake. Ohne diese
+      # trustedIPs liest Traefik den PROXY-Header als TLS-Record -> ERR_SSL_PROTOCOL_ERROR.
+      # IPs = Quell-IPs, mit denen der LB die Targets anspricht (LB public IPv4
+      # bzw. private IP, falls Target ueber privates Netz angebunden).
+      - "--entrypoints.websecure.proxyProtocol.trustedIPs=${LB_TRUSTED_IPS}"
       # web-Entrypoint + Redirect komplett raus
       - "--certificatesresolvers.hetzner.acme.dnschallenge=true"
       - "--certificatesresolvers.hetzner.acme.dnschallenge.provider=hetzner"
