@@ -69,10 +69,17 @@ jobs:
         env:
           OWNER_RAW: ${{ github.repository_owner }}
           SHA: ${{ github.sha }}
+          DEPLOY_ONLY: ${{ github.event.inputs.deploy_only }}
         run: |
           set -euo pipefail
           owner="${OWNER_RAW,,}"                 # ghcr requires lowercase
-          tag="sha-${SHA:0:12}"
+          # deploy_only skips the build, so the sha-tag of the current commit
+          # may not exist in GHCR — deploy the latest pushed images instead.
+          if [[ "${DEPLOY_ONLY}" == "true" ]]; then
+            tag="latest"
+          else
+            tag="sha-${SHA:0:12}"
+          fi
           api_base="ghcr.io/${owner}/zitadel"
           login_base="ghcr.io/${owner}/zitadel-login"
 
