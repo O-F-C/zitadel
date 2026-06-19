@@ -1,5 +1,9 @@
 networks:
+  # Fester Netz-Name (kein Compose-Projekt-Prefix). So referenzieren andere Stacks
+  # (z.B. License-Admin) das Netz extern eindeutig als `zitadel-net`, und der
+  # traefik --providers.docker.network=zitadel-net matcht garantiert.
   zitadel-net:
+    name: zitadel-net
 
 services:
   traefik:
