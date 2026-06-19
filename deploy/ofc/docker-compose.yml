@@ -20,10 +20,6 @@ services:
       # IPs = Quell-IPs, mit denen der LB die Targets anspricht (LB public IPv4
       # bzw. private IP, falls Target ueber privates Netz angebunden).
       - "--entrypoints.websecure.proxyProtocol.trustedIPs=${LB_TRUSTED_IPS}"
-      # Interner Entrypoint OHNE proxyProtocol — fuer rein intern (privates Netz)
-      # aufgerufene Dienste, kein LB davor (z.B. admin.o-f-c.dev / License-Admin).
-      # proxyProtocol gilt damit weiter NUR fuer den oeffentlichen websecure (LB/Zitadel).
-      - "--entrypoints.websecure-internal.address=:8443"
       # web-Entrypoint + Redirect komplett raus
       - "--certificatesresolvers.hetzner.acme.dnschallenge=true"
       - "--certificatesresolvers.hetzner.acme.dnschallenge.provider=hetzner"
@@ -34,9 +30,6 @@ services:
       - HETZNER_API_TOKEN=${HETZNER_DNS_TOKEN}    # DNS-Console-Token
     ports:
       - "443:443"
-      # Interner Entrypoint (ohne proxyProtocol). Default 0.0.0.0 — fuer echte
-      # Netz-Beschraenkung INTERNAL_BIND_IP auf die private Server-IP setzen.
-      - "${INTERNAL_BIND_IP:-0.0.0.0}:8443:8443"
     volumes:
       - ./letsencrypt:/letsencrypt              # acme.json muss chmod 600 sein
       - /var/run/docker.sock:/var/run/docker.sock:ro
